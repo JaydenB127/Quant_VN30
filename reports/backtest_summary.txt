@@ -1,0 +1,7 @@
+VN REGIME TRANSFER LEARNING — SUMMARY
+========================================
+precision: 0.328
+recall: 0.18
+sharpe: 0.88
+max_drawdown: -0.245
+dm_pvalue: 0.028
