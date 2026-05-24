@@ -20,7 +20,7 @@ classifiers = [
 name = "pyqlib"
 dynamic = ["version"]
 description = "A Quantitative-research Platform"
-requires-python = ">=3.8.0"
+requires-python = ">=3.11.0"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = { text = "MIT" }
 
@@ -54,6 +54,14 @@ dependencies = [
   "pyarrow",
   "pydantic-settings",
   "setuptools-scm",
+  "fastapi",
+  "uvicorn",
+  "websockets",
+  "python-multipart",
+  "sqlalchemy>=2.0",
+  "aiosqlite",
+  "asyncpg",
+  "jinja2",
 ]
 
 [project.optional-dependencies]
@@ -112,8 +120,12 @@ client = [
 # To solve this problem, we added license-files here. Refs: https://github.com/pypa/twine/issues/1216
 [tool.setuptools]
 packages = [
-  "qlib",
+  "ets",
+  "vn_regime_transfer",
+  "plugins",
+  "db",
 ]
+
 license-files = []
 
 [project.scripts]

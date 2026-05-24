@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETS Core | MLflow-like Tracking Platform</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Plotly.js for charts -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #F4F6F9;
+            --bg-panel: #FFFFFF;
+            --border-color: #DFE1E6;
+            --text-primary: #172B4D;
+            --text-secondary: #5E6C84;
+            --text-link: #0052CC;
+            --hover-bg: #F4F5F7;
+            --primary-btn: #0052CC;
+            --primary-btn-hover: #0065FF;
+            --color-success: #00875A;
+            --color-error: #DE350B;
+            --color-warning: #FFAB00;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-size: 14px;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Auth Screen */
+        .auth-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0747A6 0%, #0052CC 50%, #002B75 100%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            top: -200px;
+            left: -200px;
+            pointer-events: none;
+        }
+
+        .auth-card {
+            width: 420px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            z-index: 10;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 82, 204, 0.1);
+            border-radius: 50%;
+            color: var(--text-link);
+            margin-bottom: 12px;
+        }
+
+        .auth-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #172B4D;
+        }
+
+        .auth-header p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            color: #172B4D;
+        }
+
+        .sidebar-user {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #FAFBFC;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #0052CC;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .logout-btn:hover {
+            color: var(--color-error);
+            background-color: #FFEBE6;
+        }
+
+        .nav-section {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-title {
+            padding: 0 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            padding: 8px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 82, 204, 0.08);
+            color: var(--text-link);
+            font-weight: 600;
+            border-right: 3px solid var(--text-link);
+        }
+
+        .exp-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .exp-item {
+            padding: 8px 20px 8px 40px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .exp-item:hover {
+            background-color: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .exp-item.active {
+            background-color: rgba(0, 82, 204, 0.04);
+            color: var(--text-link);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-body);
+        }
+
+        .top-bar {
+            height: 56px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 16px;
+            font-weight: 600;
+            gap: 8px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Tables */
+        .table-container {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: #FAFBFC;
+            text-align: left;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background-color: #FAFBFC;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+        .clickable-row td {
+            color: var(--text-link);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            padding: 0 24px;
+        }
+
+        .tab {
+            padding: 14px 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--text-link);
+            border-bottom-color: var(--text-link);
+        }
+
+        /* Cards & Details */
+        .detail-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Forms & Buttons */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .btn-primary {
+            background: var(--primary-btn);
+            color: white;
+            border-color: var(--primary-btn);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-btn-hover);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--text-link);
+            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.15);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-completed { background: #E3FCEF; color: var(--color-success); }
+        .badge-failed { background: #FFEBE6; color: var(--color-error); }
+        .badge-running { background: #DEEBFF; color: var(--text-link); }
+        .badge-created { background: #FFF0B3; color: var(--color-warning); }
+
+        /* Websocket Pulse */
+        .live-pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-success);
+            box-shadow: 0 0 0 0 rgba(0, 135, 90, 0.7);
+            animation: pulse 1.5s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 135, 90, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 135, 90, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 135, 90, 0); }
+        }
+
+        /* Checkpoint steps list */
+        .step-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .step-card {
+            background: #FAFBFC;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .step-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .step-badge-pending { background: #EBECF0; color: var(--text-secondary); }
+        .step-badge-running { background: #DEEBFF; color: var(--text-link); }
+        .step-badge-completed { background: #E3FCEF; color: var(--color-success); }
+        .step-badge-failed { background: #FFEBE6; color: var(--color-error); }
+
+        .step-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Artifact visualizer */
+        .artifact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .artifact-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .artifact-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .artifact-icon {
+            color: var(--text-secondary);
+        }
+
+        .artifact-img-container {
+            width: 100%;
+            height: 180px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #FAFBFC;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .artifact-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Modal image zoom */
+        .zoom-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(9, 30, 66, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .zoom-content {
+            background: white;
+            border-radius: 6px;
+            padding: 16px;
+            max-width: 85%;
+            max-height: 85%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        .zoom-img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" style="width: 100%; display: flex; height: 100%;"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Inline React SVG Icon Component (100% safe, no DOM-mutation collision crashes)
+        function Icon({ name, size = 16, className = "", style = {} }) {
+            const icons = {
+                "activity": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                ),
+                "log-out": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                ),
+                "database": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+                        <path d="M3 12A9 3 0 0 0 21 12"></path>
+                    </svg>
+                ),
+                "plus": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                ),
+                "folder": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                ),
+                "chevron-right": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                ),
+                "upload": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                ),
+                "play": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                ),
+                "arrow-left": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                ),
+                "check": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                ),
+                "loader": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`animate-spin ${className}`} style={style}>
+                        <line x1="12" y1="2" x2="12" y2="6"></line>
+                        <line x1="12" y1="18" x2="12" y2="22"></line>
+                        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                        <line x1="2" y1="12" x2="6" y2="12"></line>
+                        <line x1="18" y1="12" x2="22" y2="12"></line>
+                        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                    </svg>
+                ),
+                "x": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                ),
+                "bar-chart-3": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                ),
+                "file": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                ),
+                "image": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                ),
+                "file-text": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                ),
+                "download": (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                )
+            };
+            return icons[name] || null;
+        }
+
+        // Login & Register Form Component
+        function AuthView({ onLoginSuccess }) {
+            const [isRegister, setIsRegister] = useState(false);
+            const [username, setUsername] = useState("");
+            const [password, setPassword] = useState("");
+            const [email, setEmail] = useState("");
+            const [error, setError] = useState("");
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError("");
+                setLoading(true);
+
+                try {
+                    if (isRegister) {
+                        const res = await fetch("/api/auth/register", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ username, password, email: email || null })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.detail || "Registration failed");
+                        
+                        setIsRegister(false);
+                        setError("Account created successfully! Please sign in.");
+                    } else {
+                        const res = await fetch("/api/auth/login", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ username, password })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.detail || "Authentication failed");
+
+                        localStorage.setItem("ets_token", data.token);
+                        localStorage.setItem("ets_username", data.username);
+                        onLoginSuccess(data.token, data.username);
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="auth-container">
+                    <div className="auth-card">
+                        <div className="auth-header">
+                            <div className="auth-logo">
+                                <Icon name="activity" size={24} />
+                            </div>
+                            <h2>ETS Tracking Platform</h2>
+                            <p>{isRegister ? "Create a new developer profile" : "Log in to track your AI experiments"}</p>
+                        </div>
+
+                        {error && (
+                            <div style={{
+                                padding: '10px 12px',
+                                background: error.includes("success") ? '#E3FCEF' : '#FFEBE6',
+                                color: error.includes("success") ? 'var(--color-success)' : 'var(--color-error)',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                marginBottom: '16px',
+                                fontWeight: '500'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Username</label>
+                                <input 
+                                    className="form-input" 
+                                    type="text" 
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required 
+                                />
+                            </div>
+
+                            {isRegister && (
+                                <div className="form-group">
+                                    <label className="form-label">Email Address (Optional)</label>
+                                    <input 
+                                        className="form-input" 
+                                        type="email" 
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input 
+                                    className="form-input" 
+                                    type="password" 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required 
+                                />
+                            </div>
+
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '10px', marginTop: '8px' }} disabled={loading}>
+                                {loading ? "Loading..." : isRegister ? "Sign Up" : "Sign In"}
+                            </button>
+                        </form>
+
+                        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                                {isRegister ? "Already have an account?" : "New to ETS Tracker?"}
+                            </span>
+                            <button 
+                                onClick={() => { setIsRegister(!isRegister); setError(""); }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-link)',
+                                    marginLeft: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                {isRegister ? "Sign In" : "Register"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [token, setToken] = useState(localStorage.getItem("ets_token"));
+            const [username, setUsername] = useState(localStorage.getItem("ets_username"));
+
+            const [view, setView] = useState("experiments"); // datasets, experiments, create_exp
+            const [datasets, setDatasets] = useState([]);
+            const [experiments, setExperiments] = useState([]);
+            
+            const [selectedExpId, setSelectedExpId] = useState(null);
+            const [expRuns, setExpRuns] = useState([]);
+            
+            const [selectedRunId, setSelectedRunId] = useState(null);
+            const [runDetails, setRunDetails] = useState(null);
+            const [runMetrics, setRunMetrics] = useState([]);
+            const [runParams, setRunParams] = useState([]);
+            const [runSteps, setRunSteps] = useState([]);
+            const [runArtifacts, setRunArtifacts] = useState([]);
+            
+            const [runTab, setRunTab] = useState("overview"); // overview, steps, metrics, params, artifacts
+            const [zoomImg, setZoomImg] = useState(null);
+            
+            const [compareRunIds, setCompareRunIds] = useState([]);
+            const [isComparing, setIsComparing] = useState(false);
+            const [compareData, setCompareData] = useState([]);
+            const [compareMetricKey, setCompareMetricKey] = useState("");
+            
+            // New state for editing experiment
+            const [isEditingExp, setIsEditingExp] = useState(false);
+            const [editExpName, setEditExpName] = useState("");
+            const [editExpDesc, setEditExpDesc] = useState("");
+
+            // New state for runs filter/sort
+            const [runsSortKey, setRunsSortKey] = useState("created_at"); 
+            const [runsSortOrder, setRunsSortOrder] = useState("desc");
+            const [runsFilter, setRunsFilter] = useState("");
+            
+            // New state for scatter plot
+            const [compareScatterX, setCompareScatterX] = useState("");
+            const [compareScatterY, setCompareScatterY] = useState("");
+            const [compareScatterMode, setCompareScatterMode] = useState("best"); // 'best' or 'last'
+            
+            // New state for run trigger overrides
+            const [triggerLR, setTriggerLR] = useState(0.05);
+            const [triggerMaxDepth, setTriggerMaxDepth] = useState(7);
+            
+            const ws = useRef(null);
+
+            const getHeaders = () => ({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            });
+
+            // Handle Login success
+            const handleLogin = (tok, user) => {
+                setToken(tok);
+                setUsername(user);
+                setTimeout(() => window.safeCreateIcons?.(), 200);
+            };
+
+            // Logout
+            const handleLogout = () => {
+                localStorage.removeItem("ets_token");
+                localStorage.removeItem("ets_username");
+                setToken(null);
+                setUsername(null);
+                if (ws.current) ws.current.close();
+            };
+
+            // Fetch Datasets & Experiments on auth
+            useEffect(() => {
+                if (token) {
+                    fetchDatasets();
+                    fetchExperiments();
+                    setTimeout(() => window.safeCreateIcons?.(), 300);
+                }
+            }, [token]);
+
+            // Fetch Runs when an experiment is selected
+            useEffect(() => {
+                if (selectedExpId && token) {
+                    fetchRuns(selectedExpId);
+                    setSelectedRunId(null);
+                    setCompareRunIds([]);
+                    setIsComparing(false);
+                }
+            }, [selectedExpId]);
+
+            // Setup WebSocket when a Run is selected
+            useEffect(() => {
+                if (selectedRunId && token) {
+                    fetchRunData(selectedRunId);
+                    
+                    if (ws.current) ws.current.close();
+
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/api/runs/${selectedRunId}/stream`;
+                    ws.current = new WebSocket(wsUrl);
+                    
+                    ws.current.onopen = () => {
+                        console.log("WS Connected for Run", selectedRunId);
+                    };
+
+                    ws.current.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        if (msg.name === "metric.logged") {
+                            setRunMetrics(prev => [...prev, msg.data]);
+                        } else if (msg.name === "step.completed" || msg.name === "step.failed") {
+                            fetchRunSteps(selectedRunId);
+                        } else if (msg.name === "run.completed" || msg.name === "run.failed") {
+                            fetchRunDetails(selectedRunId);
+                            fetchRunArtifacts(selectedRunId);
+                        }
+                    };
+
+                    return () => {
+                        if (ws.current) ws.current.close();
+                    };
+                }
+            }, [selectedRunId]);
+
+            // Fetch comparison data when comparison is active
+            useEffect(() => {
+                if (isComparing && compareRunIds.length > 0 && token) {
+                    const fetchComparisonData = async () => {
+                        try {
+                            const data = await Promise.all(compareRunIds.map(async (runId) => {
+                                const [detRes, metRes, parRes] = await Promise.all([
+                                    fetch(`/api/runs/${runId}`, { headers: getHeaders() }),
+                                    fetch(`/api/runs/${runId}/metrics`, { headers: getHeaders() }),
+                                    fetch(`/api/runs/${runId}/parameters`, { headers: getHeaders() })
+                                ]);
+                                return {
+                                    run: await detRes.json(),
+                                    metrics: await metRes.json(),
+                                    parameters: await parRes.json()
+                                };
+                            }));
+                            setCompareData(data);
+                            
+                            // Find unique metric keys
+                            const allKeys = new Set();
+                            data.forEach(d => {
+                                if (Array.isArray(d.metrics)) {
+                                    d.metrics.forEach(m => allKeys.add(m.key));
+                                }
+                            });
+                            const keysArr = Array.from(allKeys);
+                            if (keysArr.length > 0) {
+                                setCompareMetricKey(keysArr[0]);
+                                setCompareScatterX(keysArr[0]);
+                                setCompareScatterY(keysArr.length > 1 ? keysArr[1] : keysArr[0]);
+                            } else {
+                                setCompareMetricKey("");
+                                setCompareScatterX("");
+                                setCompareScatterY("");
+                            }
+                        } catch (err) {
+                            console.error("Failed to fetch comparison data:", err);
+                            alert("Error loading comparison data: " + err.message);
+                        }
+                    };
+                    fetchComparisonData();
+                }
+            }, [isComparing, compareRunIds]);
+
+            // Render Plotly comparison chart
+            useEffect(() => {
+                if (isComparing && compareData.length > 0 && compareMetricKey) {
+                    const plotComparison = () => {
+                        const container = document.getElementById("plotly-comparison-chart");
+                        if (!container) return;
+
+                        const traces = compareData.map(d => {
+                            const filtered = (d.metrics || []).filter(m => m.key === compareMetricKey);
+                            filtered.sort((a, b) => a.step - b.step);
+                            
+                            return {
+                                x: filtered.map(m => m.step),
+                                y: filtered.map(m => m.value),
+                                type: 'scatter',
+                                mode: 'lines+markers',
+                                name: `Run #${d.run.run_number} (${d.run.id.substring(0,6)})`
+                            };
+                        });
+
+                        Plotly.newPlot(container, traces, {
+                            title: `Comparison for Metric: ${compareMetricKey}`,
+                            font: {family: 'Inter'},
+                            margin: {t: 40, r: 20, b: 40, l: 40},
+                            height: 400,
+                            xaxis: { title: 'Fold / Step' },
+                            yaxis: { title: 'Value' }
+                        });
+                    };
+                    plotComparison();
+                    
+                    // Plot Bar Chart (Best Metric Value)
+                    const plotBarChart = () => {
+                        const container = document.getElementById("plotly-bar-chart");
+                        if (!container) return;
+                        
+                        const xData = [];
+                        const yData = [];
+                        
+                        compareData.forEach(d => {
+                            const filtered = (d.metrics || []).filter(m => m.key === compareMetricKey);
+                            if (filtered.length > 0) {
+                                // Assuming we want the max value for "best" (or min depending on metric, but we'll use max here for simplicity, or just the last value)
+                                // Let's use max value
+                                const maxVal = Math.max(...filtered.map(m => m.value));
+                                xData.push(`Run #${d.run.run_number}`);
+                                yData.push(maxVal);
+                            }
+                        });
+                        
+                        Plotly.newPlot(container, [{
+                            x: xData,
+                            y: yData,
+                            type: 'bar',
+                            marker: { color: 'var(--primary-btn)' }
+                        }], {
+                            title: `Best ${compareMetricKey} by Run`,
+                            font: {family: 'Inter'},
+                            margin: {t: 40, r: 20, b: 40, l: 40},
+                            height: 300,
+                            xaxis: { title: 'Run' },
+                            yaxis: { title: 'Value' }
+                        });
+                    };
+                    plotBarChart();
+                    
+                    // Plot Scatter Plot
+                    const plotScatter = () => {
+                        const container = document.getElementById("plotly-scatter-chart");
+                        if (!container) return;
+                        if (!compareScatterX || !compareScatterY) return;
+                        
+                        const traces = [];
+                        
+                        compareData.forEach(d => {
+                            let xVal = null;
+                            let yVal = null;
+                            
+                            // Check if X is a metric or param
+                            const xMetrics = (d.metrics || []).filter(m => m.key === compareScatterX);
+                            if (xMetrics.length > 0) {
+                                xVal = compareScatterMode === "best" ? Math.max(...xMetrics.map(m => m.value)) : xMetrics[xMetrics.length - 1].value;
+                            } else {
+                                const xParam = (d.parameters || []).find(p => p.key === compareScatterX);
+                                if (xParam) xVal = parseFloat(xParam.value);
+                            }
+                            
+                            // Check if Y is a metric or param
+                            const yMetrics = (d.metrics || []).filter(m => m.key === compareScatterY);
+                            if (yMetrics.length > 0) {
+                                yVal = compareScatterMode === "best" ? Math.max(...yMetrics.map(m => m.value)) : yMetrics[yMetrics.length - 1].value;
+                            } else {
+                                const yParam = (d.parameters || []).find(p => p.key === compareScatterY);
+                                if (yParam) yVal = parseFloat(yParam.value);
+                            }
+                            
+                            if (xVal !== null && yVal !== null && !isNaN(xVal) && !isNaN(yVal)) {
+                                traces.push({
+                                    x: [xVal],
+                                    y: [yVal],
+                                    mode: 'markers',
+                                    type: 'scatter',
+                                    name: `Run #${d.run.run_number}`,
+                                    marker: { size: 12 }
+                                });
+                            }
+                        });
+                        
+                        Plotly.newPlot(container, traces, {
+                            title: `${compareScatterY} vs ${compareScatterX}`,
+                            font: {family: 'Inter'},
+                            margin: {t: 40, r: 20, b: 40, l: 40},
+                            height: 350,
+                            xaxis: { title: compareScatterX },
+                            yaxis: { title: compareScatterY }
+                        });
+                    };
+                    plotScatter();
+                }
+            }, [isComparing, compareData, compareMetricKey, compareScatterX, compareScatterY, compareScatterMode]);
+
+            // Re-render Plotly charts on tab change or metrics update
+            useEffect(() => {
+                if (runTab === "metrics" && runMetrics.length > 0) {
+                    plotMetrics(runMetrics);
+                }
+            }, [runTab, runMetrics]);
+
+            useEffect(() => {
+                setTimeout(() => window.safeCreateIcons?.(), 200);
+            }, [view, selectedRunId, runTab, isComparing]);
+
+            const fetchDatasets = async () => {
+                const res = await fetch("/api/datasets", { headers: getHeaders() });
+                if (res.status === 401) return handleLogout();
+                setDatasets(await res.json());
+            };
+
+            const fetchExperiments = async () => {
+                const res = await fetch("/api/experiments", { headers: getHeaders() });
+                if (res.status === 401) return handleLogout();
+                setExperiments(await res.json());
+            };
+
+            const fetchRuns = async (expId) => {
+                const res = await fetch(`/api/runs/experiments/${expId}`, { headers: getHeaders() });
+                setExpRuns(await res.json());
+            };
+
+            const fetchRunDetails = async (runId) => {
+                const res = await fetch(`/api/runs/${runId}`, { headers: getHeaders() });
+                setRunDetails(await res.json());
+            };
+
+            const fetchRunSteps = async (runId) => {
+                const res = await fetch(`/api/runs/${runId}/steps`, { headers: getHeaders() });
+                setRunSteps(await res.json());
+            };
+
+            const fetchRunArtifacts = async (runId) => {
+                const res = await fetch(`/api/runs/${runId}/artifacts`, { headers: getHeaders() });
+                setRunArtifacts(await res.json());
+            };
+
+            const fetchRunData = async (runId) => {
+                const [detRes, metRes, parRes, stepRes, artRes] = await Promise.all([
+                    fetch(`/api/runs/${runId}`, { headers: getHeaders() }),
+                    fetch(`/api/runs/${runId}/metrics`, { headers: getHeaders() }),
+                    fetch(`/api/runs/${runId}/parameters`, { headers: getHeaders() }),
+                    fetch(`/api/runs/${runId}/steps`, { headers: getHeaders() }),
+                    fetch(`/api/runs/${runId}/artifacts`, { headers: getHeaders() })
+                ]);
+                
+                setRunDetails(await detRes.json());
+                setRunMetrics(await metRes.json());
+                setRunParams(await parRes.json());
+                setRunSteps(await stepRes.json());
+                setRunArtifacts(await artRes.json());
+                setRunTab("overview");
+            };
+
+            const deleteRun = async (runId) => {
+                if (!confirm("Are you sure you want to delete this run and all its files from disk? This cannot be undone!")) return;
+                try {
+                    const res = await fetch(`/api/runs/${runId}`, {
+                        method: "DELETE",
+                        headers: getHeaders()
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || "Failed to delete run");
+                    alert(data.message || "Run deleted successfully");
+                    
+                    if (selectedRunId === runId) {
+                        setSelectedRunId(null);
+                        setRunDetails(null);
+                    }
+                    setCompareRunIds(prev => prev.filter(id => id !== runId));
+                    if (selectedExpId) {
+                        fetchRuns(selectedExpId);
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+            
+            const handleUpdateExp = async (e) => {
+                e.preventDefault();
+                try {
+                    const res = await fetch(`/api/experiments/${selectedExpId}`, {
+                        method: "PUT",
+                        headers: getHeaders(),
+                        body: JSON.stringify({ name: editExpName, description: editExpDesc })
+                    });
+                    if (res.ok) {
+                        setIsEditingExp(false);
+                        fetchExperiments();
+                    } else {
+                        const data = await res.json();
+                        alert(data.detail || "Update failed");
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const deleteDataset = async (datasetId) => {
+                if (!confirm("Are you sure you want to delete this dataset? This cannot be undone!")) return;
+                try {
+                    const res = await fetch(`/api/datasets/${datasetId}`, {
+                        method: "DELETE",
+                        headers: getHeaders()
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || "Failed to delete dataset");
+                    alert(data.message || "Dataset deleted successfully");
+                    
+                    fetchDatasets();
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const plotMetrics = (metrics) => {
+                const container = document.getElementById("plotly-metrics-chart");
+                if (!container) return;
+
+                const grouped = {};
+                metrics.forEach(m => {
+                    grouped[m.key] = grouped[m.key] || {x: [], y: []};
+                    grouped[m.key].x.push(m.step);
+                    grouped[m.key].y.push(m.value);
+                });
+
+                const data = Object.keys(grouped).map(key => ({
+                    x: grouped[key].x,
+                    y: grouped[key].y,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: key
+                }));
+
+                Plotly.newPlot(container, data, {
+                    title: 'Evaluation Metrics Progression',
+                    font: {family: 'Inter'},
+                    margin: {t: 40, r: 20, b: 40, l: 40},
+                    height: 400,
+                    xaxis: { title: 'Fold / Step' },
+                    yaxis: { title: 'Value' }
+                });
+            };
+
+            const handleCreateExp = async (e) => {
+                e.preventDefault();
+                const name = e.target.name.value;
+                const datasetId = e.target.datasetId.value;
+                if(!name || !datasetId) return;
+
+                await fetch("/api/experiments/", {
+                    method: "POST",
+                    headers: getHeaders(),
+                    body: JSON.stringify({name, dataset_id: datasetId, pipeline_type: "finance_forecasting"})
+                });
+                fetchExperiments();
+                setView("experiments");
+            };
+
+            const triggerRun = async () => {
+                const config_override = {
+                    learning_rate: parseFloat(triggerLR),
+                    max_depth: parseInt(triggerMaxDepth, 10)
+                };
+                const res = await fetch(`/api/experiments/${selectedExpId}/run`, { 
+                    method: "POST", 
+                    headers: getHeaders(),
+                    body: JSON.stringify({ config_override })
+                });
+                const data = await res.json();
+                fetchRuns(selectedExpId);
+                setSelectedRunId(data.run_id);
+            };
+
+            if (!token) {
+                return <AuthView onLoginSuccess={handleLogin} />;
+            }
+
+            const selectedExp = experiments.find(e => e.id === selectedExpId);
+            
+            // Apply filtering and sorting to runs
+            let filteredRuns = [...expRuns];
+            if (runsFilter) {
+                filteredRuns = filteredRuns.filter(r => 
+                    r.id.includes(runsFilter) || 
+                    `Run #${r.run_number}`.toLowerCase().includes(runsFilter.toLowerCase()) ||
+                    r.status.toLowerCase().includes(runsFilter.toLowerCase())
+                );
+            }
+            filteredRuns.sort((a, b) => {
+                let valA = a[runsSortKey];
+                let valB = b[runsSortKey];
+                if (runsSortKey === 'created_at') {
+                    valA = new Date(valA).getTime();
+                    valB = new Date(valB).getTime();
+                }
+                if (valA < valB) return runsSortOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return runsSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+
+            return (
+                <React.Fragment>
+                    {/* SIDEBAR */}
+                    <div className="sidebar">
+                        <div className="sidebar-header">
+                            <Icon name="activity" style={{color: 'var(--text-link)', marginRight: '2px'}} />
+                            <span>ETS Core Platform</span>
+                        </div>
+
+                        <div className="sidebar-user">
+                            <div className="user-info">
+                                <div className="user-avatar">{username?.substring(0, 2).toUpperCase()}</div>
+                                <span style={{fontWeight: 600, fontSize: 13}}>{username}</span>
+                            </div>
+                            <button className="logout-btn" onClick={handleLogout} title="Sign Out">
+                                <Icon name="log-out" size={14} />
+                            </button>
+                        </div>
+                        
+                        <div className="nav-section">
+                            <div className={`nav-item ${view === 'datasets' ? 'active' : ''}`} onClick={() => {setView('datasets'); setSelectedExpId(null);}}>
+                                <Icon name="database" size={16} /> Datasets Registry
+                            </div>
+                        </div>
+
+                        <div className="nav-section" style={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+                            <div className="nav-title">
+                                <span>Experiments</span>
+                                <span style={{cursor: 'pointer', display: 'inline-flex', alignItems: 'center'}} onClick={() => {setView('create_exp'); setSelectedExpId(null); setSelectedRunId(null);}}>
+                                    <Icon name="plus" size={14} />
+                                </span>
+                            </div>
+                            <div className="exp-list">
+                                {Array.isArray(experiments) && experiments.map(e => (
+                                    <div 
+                                        key={e.id} 
+                                        className={`exp-item ${selectedExpId === e.id ? 'active' : ''}`}
+                                        onClick={() => {setSelectedExpId(e.id); setView('experiments');}}
+                                    >
+                                        <Icon name="folder" size={13} /> {e.name}
+                                    </div>
+                                ))}
+                                {experiments.length === 0 && (
+                                    <div style={{padding: '12px 20px', color: 'var(--text-secondary)', fontSize: 12, textAlign: 'center'}}>No experiments created yet.</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MAIN CONTENT */}
+                    <div className="main-content">
+                        {/* HEADER BAR */}
+                        <div className="top-bar">
+                            {view === 'datasets' && <span>Dataset Registry</span>}
+                            {view === 'create_exp' && <span>Create Experiment</span>}
+                            {view === 'experiments' && !selectedExpId && <span style={{color: 'var(--text-secondary)'}}>Select an experiment to view runs</span>}
+                            {view === 'experiments' && selectedExpId && (
+                                <React.Fragment>
+                                    <span style={{fontWeight: 600}}>{selectedExp ? selectedExp.name : "Experiment"}</span>
+                                    {isComparing && (
+                                        <React.Fragment>
+                                            <Icon name="chevron-right" size={16} style={{color: 'var(--text-secondary)'}} />
+                                            <span style={{color: 'var(--text-secondary)', fontSize: 15, fontWeight: 500}}>Compare Runs</span>
+                                        </React.Fragment>
+                                    )}
+                                    {!isComparing && selectedRunId && (
+                                        <React.Fragment>
+                                            <Icon name="chevron-right" size={16} style={{color: 'var(--text-secondary)'}} />
+                                            <span style={{color: 'var(--text-secondary)', fontSize: 15, fontWeight: 500}}>Run #{runDetails?.run_number} ({runDetails?.id?.substring(0,8) || ""})</span>
+                                        </React.Fragment>
+                                    )}
+                                </React.Fragment>
+                            )}
+                        </div>
+
+                        <div className="content-scroll">
+                            
+                            {/* DATASETS VIEW */}
+                            {view === 'datasets' && (
+                                <div className="detail-card">
+                                    <h3>Registered Datasets</h3>
+                                    <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Upload and manage datasets with built-in deduplication.</p>
+                                    
+                                    <div style={{marginBottom: 20, padding: 16, background: '#FAFBFC', border: '1px dashed var(--border-color)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 12}}>
+                                        <input 
+                                            type="file" 
+                                            id="dataset-upload-input" 
+                                            accept=".csv" 
+                                            style={{display: 'none'}} 
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                const formData = new FormData();
+                                                formData.append("file", file);
+                                                formData.append("description", "Uploaded via Web UI");
+                                                
+                                                const res = await fetch("/api/datasets/upload", {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Authorization": `Bearer ${token}`
+                                                    },
+                                                    body: formData
+                                                });
+                                                if (res.ok) {
+                                                    fetchDatasets();
+                                                } else {
+                                                    const data = await res.json();
+                                                    alert(data.detail || "Upload failed");
+                                                }
+                                            }}
+                                        />
+                                        <button className="btn btn-primary" onClick={() => document.getElementById('dataset-upload-input').click()}>
+                                            <Icon name="upload" size={14} /> Upload New CSV Dataset
+                                        </button>
+                                        <span style={{color: 'var(--text-secondary)', fontSize: 13}}>Select any CSV dataset to profile and track.</span>
+                                    </div>
+
+                                    <div className="table-container">
+                                        <table>
+                                            <thead><tr><th>Name</th><th>Hash</th><th>Shape</th><th style={{textAlign: 'right'}}>Actions</th></tr></thead>
+                                            <tbody>
+                                                {Array.isArray(datasets) && datasets.map(d => (
+                                                    <tr key={d.id}>
+                                                        <td>{d.name}</td>
+                                                        <td><code>{d.dataset_hash.substring(0,12)}</code></td>
+                                                        <td>{d.n_rows} x {d.n_columns}</td>
+                                                        <td style={{textAlign: 'right'}}>
+                                                            <button 
+                                                                className="btn" 
+                                                                style={{padding: '2px 8px', color: 'var(--color-error)', borderColor: '#FFEBE6', background: 'none'}} 
+                                                                onClick={() => deleteDataset(d.id)}
+                                                            >
+                                                                <Icon name="x" size={14} style={{verticalAlign: 'middle', marginRight: 4}} /> Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {datasets.length === 0 && (
+                                                    <tr><td colSpan="4" style={{textAlign: 'center', padding: 24, color: 'var(--text-secondary)'}}>No datasets registered yet.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CREATE EXPERIMENT VIEW */}
+                            {view === 'create_exp' && (
+                                <div className="detail-card" style={{maxWidth: 600}}>
+                                    <h3 style={{marginBottom: 16}}>Create New Experiment</h3>
+                                    <form onSubmit={handleCreateExp}>
+                                        <div className="form-group">
+                                            <label className="form-label">Experiment Name</label>
+                                            <input name="name" type="text" className="form-input" required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Dataset</label>
+                                            <select name="datasetId" className="form-select" required>
+                                                <option value="">Select dataset...</option>
+                                                {Array.isArray(datasets) && datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <button type="submit" className="btn btn-primary">Create</button>
+                                    </form>
+                                </div>
+                            )}
+
+                            {/* EXPERIMENT RUNS VIEW */}
+                            {view === 'experiments' && selectedExpId && !selectedRunId && !isComparing && (
+                                <div>
+                                    <div style={{marginBottom: 20, display: 'flex', justifyContent: 'space-between'}}>
+                                        {isEditingExp ? (
+                                            <div style={{flex: 1, marginRight: 20}}>
+                                                <form onSubmit={handleUpdateExp} style={{display: 'flex', gap: 10, alignItems: 'flex-start'}}>
+                                                    <div style={{flex: 1}}>
+                                                        <input type="text" className="form-input" value={editExpName} onChange={e => setEditExpName(e.target.value)} required placeholder="Experiment Name" style={{marginBottom: 8}} />
+                                                        <textarea className="form-input" value={editExpDesc} onChange={e => setEditExpDesc(e.target.value)} placeholder="Description" rows={2} style={{resize: 'vertical'}}></textarea>
+                                                    </div>
+                                                    <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+                                                        <button type="submit" className="btn btn-primary">Save</button>
+                                                        <button type="button" className="btn" onClick={() => setIsEditingExp(false)}>Cancel</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                                                    <h2>Runs for: {selectedExp?.name}</h2>
+                                                    <button className="btn" style={{padding: '4px 8px'}} onClick={() => {
+                                                        setEditExpName(selectedExp?.name || "");
+                                                        setEditExpDesc(selectedExp?.description || "");
+                                                        setIsEditingExp(true);
+                                                    }}>
+                                                        Edit
+                                                    </button>
+                                                </div>
+                                                <p style={{color: 'var(--text-secondary)', marginTop: 4}}>{selectedExp?.description || "No description provided."}</p>
+                                            </div>
+                                        )}
+                                        <div style={{display: 'flex', gap: 10, alignItems: 'center', alignSelf: 'flex-start'}}>
+                                            {compareRunIds.length >= 2 && (
+                                                <button className="btn btn-primary" style={{background: '#00875A', borderColor: '#00875A'}} onClick={() => setIsComparing(true)}>
+                                                    <Icon name="bar-chart-3" size={14} /> Compare Selected ({compareRunIds.length})
+                                                </button>
+                                            )}
+                                            <div style={{display: 'flex', alignItems: 'center', gap: 8, background: '#FAFBFC', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                                                    <label style={{fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)'}}>LR:</label>
+                                                    <input type="number" step="0.01" className="form-input" style={{width: 60, padding: '2px 4px', fontSize: 12}} value={triggerLR} onChange={e => setTriggerLR(e.target.value)} />
+                                                </div>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                                                    <label style={{fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)'}}>Depth:</label>
+                                                    <input type="number" step="1" className="form-input" style={{width: 50, padding: '2px 4px', fontSize: 12}} value={triggerMaxDepth} onChange={e => setTriggerMaxDepth(e.target.value)} />
+                                                </div>
+                                                <button className="btn btn-primary" style={{padding: '4px 8px', fontSize: 12}} onClick={triggerRun}>
+                                                    <Icon name="play" size={12} /> Trigger Run
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Filters & Sort */}
+                                    <div style={{marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center', background: '#FAFBFC', padding: '12px 16px', borderRadius: 6, border: '1px solid var(--border-color)'}}>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                            <label style={{fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)'}}>Search:</label>
+                                            <input type="text" className="form-input" style={{width: 200, padding: '4px 8px'}} placeholder="Run ID or status..." value={runsFilter} onChange={e => setRunsFilter(e.target.value)} />
+                                        </div>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                            <label style={{fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)'}}>Sort By:</label>
+                                            <select className="form-select" style={{width: 150, padding: '4px 8px'}} value={runsSortKey} onChange={e => setRunsSortKey(e.target.value)}>
+                                                <option value="created_at">Date Created</option>
+                                                <option value="run_number">Run Number</option>
+                                                <option value="duration_seconds">Duration</option>
+                                                <option value="status">Status</option>
+                                            </select>
+                                        </div>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                            <label style={{fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)'}}>Order:</label>
+                                            <select className="form-select" style={{width: 120, padding: '4px 8px'}} value={runsSortOrder} onChange={e => setRunsSortOrder(e.target.value)}>
+                                                <option value="desc">Descending</option>
+                                                <option value="asc">Ascending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="table-container">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{width: 50}}>Select</th>
+                                                    <th>Run Name / ID</th>
+                                                    <th>Date</th>
+                                                    <th>Duration</th>
+                                                    <th>Status</th>
+                                                    <th style={{textAlign: 'right'}}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredRuns.map(r => (
+                                                    <tr key={r.id} className="clickable-row" onClick={() => setSelectedRunId(r.id)}>
+                                                        <td onClick={(e) => e.stopPropagation()}>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                style={{cursor: 'pointer', width: 16, height: 16}}
+                                                                checked={compareRunIds.includes(r.id)} 
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setCompareRunIds(prev => [...prev, r.id]);
+                                                                    } else {
+                                                                        setCompareRunIds(prev => prev.filter(id => id !== r.id));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td><b>Run #{r.run_number}</b><br/><span style={{fontSize: 11, color: 'var(--text-secondary)'}}>{r.id}</span></td>
+                                                        <td>{new Date(r.created_at).toLocaleString()}</td>
+                                                        <td>{r.duration_seconds ? `${r.duration_seconds.toFixed(1)}s` : '-'}</td>
+                                                        <td><span className={`badge badge-${r.status}`}>{r.status}</span></td>
+                                                        <td style={{textAlign: 'right'}}>
+                                                            <button 
+                                                                className="btn" 
+                                                                style={{padding: '4px 10px', color: 'var(--color-error)', borderColor: '#FFEBE6', background: 'none'}} 
+                                                                onClick={(e) => { e.stopPropagation(); deleteRun(r.id); }}
+                                                            >
+                                                                <Icon name="x" size={14} style={{verticalAlign: 'middle', marginRight: 4}} /> Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {filteredRuns.length === 0 && (
+                                                    <tr><td colSpan="6" style={{textAlign: 'center', padding: 24, color: 'var(--text-secondary)'}}>No runs found matching the criteria.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* RUNS COMPARISON VIEW */}
+                            {view === 'experiments' && selectedExpId && isComparing && (
+                                <div>
+                                    <div style={{marginBottom: 20, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center'}}>
+                                        <div>
+                                            <button className="btn" onClick={() => { setIsComparing(false); setCompareData([]); }} style={{padding: '4px 10px', marginBottom: 8}}>
+                                                <Icon name="arrow-left" size={14} /> Back to Runs
+                                            </button>
+                                            <h2>Compare Runs ({compareRunIds.length})</h2>
+                                        </div>
+                                        {compareData.length > 0 && (
+                                            <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                                                <span style={{fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)'}}>Compare Metric:</span>
+                                                <select 
+                                                    className="form-select" 
+                                                    style={{width: 240, padding: '6px 10px'}} 
+                                                    value={compareMetricKey} 
+                                                    onChange={(e) => setCompareMetricKey(e.target.value)}
+                                                >
+                                                    {Array.from(new Set(compareData.flatMap(d => (d.metrics || []).map(m => m.key)))).map(k => (
+                                                        <option key={k} value={k}>{k}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {compareData.length === 0 ? (
+                                        <div style={{textAlign: 'center', padding: 48, background: '#fff', border: '1px solid var(--border-color)', borderRadius: 6}}>
+                                            <Icon name="loader" size={32} className="animate-spin" style={{marginBottom: 8}} />
+                                            <p>Loading comparison data...</p>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {/* PLOT CARD */}
+                                            <div className="detail-card">
+                                                <h3>Epoch/Fold Progress Comparison</h3>
+                                                <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Compare metric values side-by-side across all training steps or folds.</p>
+                                                {compareMetricKey ? (
+                                                    <div id="plotly-comparison-chart" style={{width: '100%'}}></div>
+                                                ) : (
+                                                    <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: 24}}>No metrics logged to compare.</p>
+                                                )}
+                                            </div>
+
+                                            {/* METRICS SIDE-BY-SIDE */}
+                                            <div className="detail-card">
+                                                <h3>Final Metrics Comparison</h3>
+                                                <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Side-by-side comparison of the latest metric values for each run.</p>
+                                                <div className="table-container">
+                                                    <table>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Metric Key</th>
+                                                                {compareData.map(d => (
+                                                                    <th key={d.run.id} style={{textAlign: 'right'}}>Run #{d.run.run_number}</th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {Array.from(new Set(compareData.flatMap(d => (d.metrics || []).map(m => m.key)))).map(key => (
+                                                                <tr key={key}>
+                                                                    <td style={{fontWeight: 600}}>{key}</td>
+                                                                    {compareData.map(d => {
+                                                                        const metList = (d.metrics || []).filter(m => m.key === key);
+                                                                        if (metList.length === 0) return <td key={d.run.id} style={{textAlign: 'right', color: 'var(--text-secondary)'}}>-</td>;
+                                                                        const latest = metList.reduce((max, m) => m.step > max.step ? m : max, metList[0]);
+                                                                        return <td key={d.run.id} style={{textAlign: 'right'}}><b>{latest.value.toFixed(4)}</b> <span style={{fontSize: 10, color: 'var(--text-secondary)'}}>(step {latest.step})</span></td>;
+                                                                    })}
+                                                                </tr>
+                                                            ))}
+                                                            {Array.from(new Set(compareData.flatMap(d => (d.metrics || []).map(m => m.key)))).length === 0 && (
+                                                                <tr><td colSpan={compareData.length + 1} style={{textAlign: 'center', padding: 24, color: 'var(--text-secondary)'}}>No metrics recorded for comparison.</td></tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* PARAMETERS SIDE-BY-SIDE */}
+                                            <div className="detail-card">
+                                                <h3>Hyperparameters Comparison</h3>
+                                                <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Side-by-side hyperparameters comparison. Rows highlighted in yellow indicate differing configurations.</p>
+                                                <div className="table-container">
+                                                    <table>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Parameter Key</th>
+                                                                {compareData.map(d => (
+                                                                    <th key={d.run.id}>Run #{d.run.run_number}</th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {Array.from(new Set(compareData.flatMap(d => (d.parameters || []).map(p => p.key)))).map(key => {
+                                                                const values = compareData.map(d => {
+                                                                    const found = (d.parameters || []).find(p => p.key === key);
+                                                                    return found ? found.value : undefined;
+                                                                });
+                                                                const isDifferent = new Set(values).size > 1;
+                                                                
+                                                                return (
+                                                                    <tr key={key} style={isDifferent ? {background: 'rgba(255, 171, 0, 0.08)'} : {}}>
+                                                                        <td style={{fontWeight: 600}}>
+                                                                            {key} {isDifferent && <span style={{color: 'var(--color-warning)', fontSize: 10, marginLeft: 4, fontWeight: 'normal'}}>⚠️ Changed</span>}
+                                                                        </td>
+                                                                        {compareData.map(d => {
+                                                                            const found = (d.parameters || []).find(p => p.key === key);
+                                                                            return <td key={d.run.id}><code>{found ? found.value : '-'}</code></td>
+                                                                        })}
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                            {Array.from(new Set(compareData.flatMap(d => (d.parameters || []).map(p => p.key)))).length === 0 && (
+                                                                <tr><td colSpan={compareData.length + 1} style={{textAlign: 'center', padding: 24, color: 'var(--text-secondary)'}}>No parameters recorded for comparison.</td></tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* BAR CHART */}
+                                            <div className="detail-card">
+                                                <h3>Best Metric Comparison (Bar Chart)</h3>
+                                                <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Compare the best (maximum) value of the selected metric across all runs.</p>
+                                                {compareMetricKey ? (
+                                                    <div id="plotly-bar-chart" style={{width: '100%'}}></div>
+                                                ) : (
+                                                    <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: 24}}>No metrics logged to compare.</p>
+                                                )}
+                                            </div>
+
+                                            {/* SCATTER PLOT */}
+                                            <div className="detail-card">
+                                                <h3>Hyperparameters vs Metrics (Scatter Plot)</h3>
+                                                <p style={{color: 'var(--text-secondary)', marginBottom: 16}}>Analyze correlations between parameters and metrics across multiple runs.</p>
+                                                
+                                                <div style={{display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap'}}>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                                        <label style={{fontSize: 12, fontWeight: 600}}>X-Axis:</label>
+                                                        <select className="form-select" style={{width: 180, padding: '4px 8px'}} value={compareScatterX} onChange={e => setCompareScatterX(e.target.value)}>
+                                                            <optgroup label="Metrics">
+                                                                {Array.from(new Set(compareData.flatMap(d => (d.metrics || []).map(m => m.key)))).map(k => <option key={`m_${k}`} value={k}>{k}</option>)}
+                                                            </optgroup>
+                                                            <optgroup label="Parameters">
+                                                                {Array.from(new Set(compareData.flatMap(d => (d.parameters || []).map(p => p.key)))).map(k => <option key={`p_${k}`} value={k}>{k}</option>)}
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                                        <label style={{fontSize: 12, fontWeight: 600}}>Y-Axis:</label>
+                                                        <select className="form-select" style={{width: 180, padding: '4px 8px'}} value={compareScatterY} onChange={e => setCompareScatterY(e.target.value)}>
+                                                            <optgroup label="Metrics">
+                                                                {Array.from(new Set(compareData.flatMap(d => (d.metrics || []).map(m => m.key)))).map(k => <option key={`m_${k}`} value={k}>{k}</option>)}
+                                                            </optgroup>
+                                                            <optgroup label="Parameters">
+                                                                {Array.from(new Set(compareData.flatMap(d => (d.parameters || []).map(p => p.key)))).map(k => <option key={`p_${k}`} value={k}>{k}</option>)}
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                                        <label style={{fontSize: 12, fontWeight: 600}}>Metric Aggregation:</label>
+                                                        <select className="form-select" style={{width: 120, padding: '4px 8px'}} value={compareScatterMode} onChange={e => setCompareScatterMode(e.target.value)}>
+                                                            <option value="best">Best (Max)</option>
+                                                            <option value="last">Last Value</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {(compareScatterX && compareScatterY) ? (
+                                                    <div id="plotly-scatter-chart" style={{width: '100%'}}></div>
+                                                ) : (
+                                                    <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: 24}}>Select X and Y axes to plot.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* RUN DETAILS VIEW */}
+                            {view === 'experiments' && selectedRunId && runDetails && !isComparing && (
+                                <div style={{background: '#fff', border: '1px solid var(--border-color)', borderRadius: 6}}>
+                                    
+                                    <div style={{padding: '24px 24px 0 24px'}}>
+                                        <div style={{display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', marginBottom: 16}}>
+                                            <div>
+                                                <button className="btn" onClick={() => { setSelectedRunId(null); fetchRuns(selectedExpId); }} style={{padding: '4px 10px', marginBottom: 8}}>
+                                                    <Icon name="arrow-left" size={14} /> Back to Runs
+                                                </button>
+                                                <h2>Run Details: #{runDetails.run_number}</h2>
+                                            </div>
+                                            <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                                                {runDetails.status === 'running' && <span className="live-pulse"></span>}
+                                                <span className={`badge badge-${runDetails.status}`} style={{marginRight: 8}}>{runDetails.status.toUpperCase()}</span>
+                                                <button 
+                                                    className="btn" 
+                                                    style={{padding: '4px 10px', color: 'var(--color-error)', borderColor: '#FFEBE6', background: 'none'}} 
+                                                    onClick={() => deleteRun(runDetails.id)}
+                                                >
+                                                    <Icon name="x" size={14} style={{verticalAlign: 'middle', marginRight: 4}} /> Delete Run
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="tabs">
+                                        <div className={`tab ${runTab === 'overview' ? 'active' : ''}`} onClick={() => setRunTab('overview')}>Overview</div>
+                                        <div className={`tab ${runTab === 'steps' ? 'active' : ''}`} onClick={() => setRunTab('steps')}>Steps Checkpoints</div>
+                                        <div className={`tab ${runTab === 'metrics' ? 'active' : ''}`} onClick={() => setRunTab('metrics')}>Metrics Progression {runDetails.status === 'running' && '🔴'}</div>
+                                        <div className={`tab ${runTab === 'params' ? 'active' : ''}`} onClick={() => setRunTab('params')}>Parameters</div>
+                                        <div className={`tab ${runTab === 'artifacts' ? 'active' : ''}`} onClick={() => setRunTab('artifacts')}>Artifacts & Models</div>
+                                    </div>
+
+                                    <div style={{padding: 24}}>
+                                        {runTab === 'overview' && (
+                                            <div className="grid-2">
+                                                <div>
+                                                    <h4 style={{marginBottom: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: 11}}>Lifecycle</h4>
+                                                    <p style={{marginBottom: 8}}><b>Run ID:</b> <code>{runDetails.id}</code></p>
+                                                    <p style={{marginBottom: 8}}><b>Created:</b> {new Date(runDetails.created_at).toLocaleString()}</p>
+                                                    <p style={{marginBottom: 8}}><b>Started:</b> {runDetails.started_at ? new Date(runDetails.started_at).toLocaleString() : '-'}</p>
+                                                    <p style={{marginBottom: 8}}><b>Completed:</b> {runDetails.completed_at ? new Date(runDetails.completed_at).toLocaleString() : '-'}</p>
+                                                    <p style={{marginBottom: 8}}><b>Duration:</b> {runDetails.duration_seconds ? `${runDetails.duration_seconds.toFixed(1)} seconds` : '-'}</p>
+                                                    {runDetails.error_message && (
+                                                        <div style={{marginTop: 16, padding: 12, background: '#FFEBE6', color: 'var(--color-error)', borderLeft: '4px solid var(--color-error)', borderRadius: '4px'}}>
+                                                            <b>Error message:</b><br/>{runDetails.error_message}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 style={{marginBottom: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: 11}}>Configuration Snapshot</h4>
+                                                    <pre style={{background: '#f4f5f7', padding: 12, borderRadius: 4, fontSize: 12, overflow: 'auto', maxHeight: 200}}>{JSON.stringify(runDetails.config_snapshot, null, 2)}</pre>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {runTab === 'steps' && (
+                                            <div>
+                                                <h3 style={{marginBottom: 16}}>Pipeline Checkpoint Status</h3>
+                                                {runSteps.length === 0 ? (
+                                                    <p style={{color: 'var(--text-secondary)'}}>No step data initialized yet.</p>
+                                                ) : (
+                                                    <ul className="step-list">
+                                                        {Array.isArray(runSteps) && runSteps.map((s, idx) => (
+                                                            <li key={idx} className="step-card">
+                                                                <div className="step-info">
+                                                                    <div className={`step-badge step-badge-${s.status}`}>
+                                                                        {s.status === 'completed' && <Icon name="check" size={12} />}
+                                                                        {s.status === 'running' && <Icon name="loader" className="animate-spin" size={12} />}
+                                                                        {s.status === 'failed' && <Icon name="x" size={12} />}
+                                                                        {s.status === 'pending' && <span>{idx+1}</span>}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="step-name">{s.step_name.replace(/_/g, ' ').toUpperCase()}</span>
+                                                                        <div style={{fontSize: 11, color: 'var(--text-secondary)'}}>
+                                                                            Completed at: {s.completed_at ? new Date(s.completed_at).toLocaleString() : 'Pending'}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <span className={`badge badge-${s.status}`}>{s.status}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {runTab === 'metrics' && (
+                                            <div>
+                                                {runMetrics.length === 0 ? (
+                                                    <div style={{textAlign: 'center', padding: 32, color: 'var(--text-secondary)'}}>
+                                                        <Icon name="bar-chart-3" size={32} style={{marginBottom: 8}} />
+                                                        <p>No evaluation metrics logged yet.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {runDetails.status === 'running' && (
+                                                            <div style={{background: 'rgba(0, 82, 204, 0.05)', padding: '8px 12px', borderLeft: '3px solid var(--text-link)', marginBottom: 16, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6}}>
+                                                                <span className="live-pulse"></span>
+                                                                <span>WebSocket Live Streaming Telemetry Active</span>
+                                                            </div>
+                                                        )}
+                                                        <div id="plotly-metrics-chart" style={{width: '100%'}}></div>
+                                                        
+                                                        <h4 style={{marginTop: 32, marginBottom: 12}}>Metric History Log</h4>
+                                                        <div className="table-container" style={{maxHeight: 300, overflowY: 'auto'}}>
+                                                            <table style={{width: '100%', fontSize: 12}}>
+                                                                 <thead><tr><th>Timestamp</th><th>Step</th><th>Key</th><th>Value</th></tr></thead>
+                                                                 <tbody>
+                                                                    {Array.isArray(runMetrics) && runMetrics.slice().reverse().map((m, i) => (
+                                                                        <tr key={i}>
+                                                                            <td>{new Date(m.timestamp).toLocaleTimeString()}</td>
+                                                                            <td>{m.step}</td>
+                                                                            <td><b>{m.key}</b></td>
+                                                                            <td>{m.value.toFixed(4)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {runTab === 'params' && (
+                                            <div>
+                                                <h3 style={{marginBottom: 16}}>Hyperparameters & Settings</h3>
+                                                <div className="table-container">
+                                                    <table style={{width: '100%'}}>
+                                                        <thead><tr><th>Key</th><th>Value</th></tr></thead>
+                                                        <tbody>
+                                                            {Array.isArray(runParams) && runParams.map(p => (
+                                                                <tr key={p.key}>
+                                                                    <td style={{fontWeight: 600, width: '30%'}}>{p.key}</td>
+                                                                    <td><code>{p.value}</code></td>
+                                                                </tr>
+                                                            ))}
+                                                            {Array.isArray(runParams) && runParams.length === 0 && (
+                                                                <tr><td colSpan="2" style={{textAlign: 'center', padding: 24, color: 'var(--text-secondary)'}}>No parameters registered.</td></tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {runTab === 'artifacts' && (
+                                            <div>
+                                                <h3 style={{marginBottom: 16}}>Outputs, Model Weights & Visualization Plots</h3>
+                                                {(!Array.isArray(runArtifacts) || runArtifacts.length === 0) ? (
+                                                    <div style={{textAlign: 'center', padding: 32, color: 'var(--text-secondary)'}}>
+                                                        <Icon name="file" size={32} style={{marginBottom: 8}} />
+                                                        <p>No artifact files logged yet. The pipeline generates reports during the reporting step.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="artifact-grid">
+                                                        {Array.isArray(runArtifacts) && runArtifacts.map(art => (
+                                                            <div key={art.id} className="artifact-card">
+                                                                <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                                                                    <Icon name={art.content_type.startsWith("image/") ? "image" : "file-text"} size={20} className="artifact-icon" />
+                                                                    <div style={{overflow: 'hidden'}}>
+                                                                        <b style={{fontSize: 13, textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{art.name}</b>
+                                                                        <div style={{fontSize: 11, color: 'var(--text-secondary)'}}>{(art.file_size_bytes / 1024).toFixed(1)} KB</div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {art.content_type.startsWith("image/") && (
+                                                                    <div className="artifact-img-container" onClick={() => setZoomImg(`/api/runs/${selectedRunId}/artifacts/${art.id}/download`)}>
+                                                                        <img src={`/api/runs/${selectedRunId}/artifacts/${art.id}/download`} className="artifact-img" alt={art.name} />
+                                                                    </div>
+                                                                )}
+
+                                                                <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end'}}>
+                                                                    <a 
+                                                                        href={`/api/runs/${selectedRunId}/artifacts/${art.id}/download`} 
+                                                                        download={art.name}
+                                                                        className="btn btn-primary"
+                                                                        style={{padding: '4px 10px', fontSize: 12, textDecoration: 'none'}}
+                                                                    >
+                                                                        <Icon name="download" size={12} /> Download
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+
+                    {/* IMAGE ZOOM MODAL */}
+                    {zoomImg && (
+                        <div className="zoom-modal" onClick={() => setZoomImg(null)}>
+                            <div className="zoom-content" onClick={(e) => e.stopPropagation()}>
+                                <button className="btn" style={{position: 'absolute', top: 12, right: 12, zIndex: 100, padding: 4}} onClick={() => setZoomImg(null)}>
+                                    <Icon name="x" size={16} />
+                                </button>
+                                <img src={zoomImg} className="zoom-img" alt="Zoomed Artifact" />
+                            </div>
+                        </div>
+                    )}
+                </React.Fragment>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+
+        // Safe try-catch wrapper to avoid React virtual DOM sync crashes
+        window.safeCreateIcons = () => {
+            try {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                console.warn("Lucide icon generation skipped: DOM in transition.", e);
+            }
+        };
+
+        // Initial trigger
+        setTimeout(() => window.safeCreateIcons(), 300);
+    </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Regime-Aware Transfer Learning for VN Equity
+# Core dependencies
+
+# ── Data ──
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0
+vnstock>=3.0.0
+python-dateutil>=2.8.0
+
+# ── ML (GBDT) ──
+lightgbm>=4.0.0
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+
+# ── Deep Learning (optional — install for LSTM/Transformer baselines) ──
+torch>=2.0.0
+
+# ── Regime Detection ──
+hmmlearn>=0.3.0
+ruptures>=1.1.7
+
+# ── Statistics ──
+scipy>=1.10.0
+statsmodels>=0.14.0
+
+# ── Visualisation ──
+matplotlib>=3.7.0
+seaborn>=0.12.0
+shap>=0.42.0
+
+# ── Testing ──
+pytest>=7.4.0
+tqdm>=4.65.0

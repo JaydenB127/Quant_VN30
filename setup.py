@@ -1,13 +1,11 @@
 import os
+from setuptools import setup
 
-import numpy
-from setuptools import Extension, setup
-
-NUMPY_INCLUDE = numpy.get_include()
-
-
-setup(
-    ext_modules=[
+if os.path.exists("qlib"):
+    import numpy
+    from setuptools import Extension
+    NUMPY_INCLUDE = numpy.get_include()
+    ext_modules = [
         Extension(
             "qlib.data._libs.rolling",
             ["qlib/data/_libs/rolling.pyx"],
@@ -20,5 +18,9 @@ setup(
             language="c++",
             include_dirs=[NUMPY_INCLUDE],
         ),
-    ],
-)
+    ]
+else:
+    ext_modules = []
+
+setup(ext_modules=ext_modules)
+

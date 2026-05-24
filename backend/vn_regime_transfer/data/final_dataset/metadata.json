@@ -1,0 +1,27 @@
+{
+  "description": "VN30 synthetic dataset for academic submission",
+  "period": {
+    "start": "2018-01-02",
+    "end": "2024-12-31"
+  },
+  "n_stocks": 30,
+  "frequency": "daily",
+  "features": [
+    "ret_1d",
+    "ret_5d",
+    "vol_20",
+    "volume_ratio",
+    "foreign_flow_proxy"
+  ],
+  "target": "Short signal: Close(T+3) < Close(T) × 0.985",
+  "regimes": [
+    "Bull_LoVol",
+    "Bull_HiVol",
+    "Bear_LoVol",
+    "Bear_HiVol"
+  ],
+  "total_rows": 54149,
+  "positive_targets": 17953,
+  "class_imbalance_ratio": 2.0,
+  "generated_at": "2026-05-12T09:29:56.182062"
+}
